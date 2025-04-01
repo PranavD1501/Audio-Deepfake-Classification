@@ -4,7 +4,7 @@ AI Speech Forgery Detection
 Overview:
 This project focuses on detecting AI-generated speech using deep learning models optimized for real-time or near real-time detection. It analyzes real conversations and identifies synthetic speech with high accuracy.
 
-Approaches Used overall for AI Speech Forgery Detection:
+Approaches Used for AI Speech Forgery Detection:
 
 1.Wave2Vec2 model (fine tuned):
   * Key-Technical Innovations:
