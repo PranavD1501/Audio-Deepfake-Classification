@@ -1,0 +1,6 @@
+Implementation Process:
+
+Challenges Encountered & Solutions:
+Throughout the implementation process, multiple challenges were encountered, requiring specific strategies to mitigate their impact.
+Following are the challenges encountered and their solutions:
+1.Differentiating High-Quality AI-Generated Speech from Real Human Speech:- One of the most significant challenges was distinguishing high-quality AI-generated speech from real human speech, particularly when the AI-generated voices were trained on large datasets and enhanced with prosody modeling to introduce natural variations in speech. These models often remove traditional artifacts that make synthetic speech identifiable.
