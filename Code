@@ -1,0 +1,77 @@
+import torch
+import torchaudio
+import librosa
+import soundfile as sf
+from transformers import Wav2Vec2Processor, Wav2Vec2ForSequenceClassification
+from flask import Flask, request, jsonify
+from datasets import load_dataset
+from torch.utils.data import DataLoader
+import os
+
+MODEL_NAME = "facebook/wav2vec2-large-xlsr-53"
+processor = Wav2Vec2Processor.from_pretrained(MODEL_NAME)
+model = Wav2Vec2ForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+model.eval()
+
+
+def preprocess_audio(audio_path):
+    speech, sr = librosa.load(audio_path, sr=16000)
+    inputs = processor(speech, sampling_rate=16000, return_tensors="pt", padding=True)
+    return inputs.input_values
+
+
+def predict(input_values):
+    input_values = input_values.to(device)
+    with torch.no_grad():
+        logits = model(input_values).logits
+    prediction = torch.argmax(logits, dim=-1).item()
+    return "Real Speech" if prediction == 0 else "AI-Generated Speech"
+
+
+def fine_tune_model():
+    dataset = load_dataset("path/to/dataset")
+
+    def preprocess_function(examples):
+        audio = examples["audio"]["array"]
+        inputs = processor(audio, sampling_rate=16000, return_tensors="pt", padding=True)
+        return {"input_values": inputs.input_values.squeeze(0), "labels": examples["label"]}
+
+    dataset = dataset.map(preprocess_function, remove_columns=["audio"])
+    train_dataloader = DataLoader(dataset["train"], batch_size=8, shuffle=True)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+    loss_fn = torch.nn.CrossEntropyLoss()
+
+    model.train()
+    for epoch in range(3):
+        for batch in train_dataloader:
+            input_values, labels = batch["input_values"].to(device), batch["labels"].to(device)
+            outputs = model(input_values)
+            loss = loss_fn(outputs.logits, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    model.save_pretrained("fine_tuned_wav2vec2")
+    processor.save_pretrained("fine_tuned_wav2vec2")
+
+
+# Optional Flask API
+app = Flask(__name__)
+
+@app.route('/predict', methods=['POST'])
+def predict_api():
+    file = request.files['file']
+    file.save("temp.wav")
+
+    input_values = preprocess_audio("temp.wav")
+    result = predict(input_values)
+
+    return jsonify({"prediction": result})
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
